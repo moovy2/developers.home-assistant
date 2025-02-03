@@ -2,7 +2,7 @@
 title: "WebSocket API"
 ---
 
-Home Assistant contains a WebSocket API. This API can be used to stream information from a Home Assistant instance to any client that implements WebSockets. We maintain a [JavaScript library](https://github.com/home-assistant/home-assistant-js-websocket) which we use in our frontend.
+Home Assistant hosts a WebSocket API at `/api/websocket`. This API can be used to stream information from a Home Assistant instance to any client that implements WebSockets. We maintain a [JavaScript library](https://github.com/home-assistant/home-assistant-js-websocket) which we use in our frontend.
 
 ## Server states
 
@@ -23,7 +23,7 @@ During the command phase, the client attaches a unique identifier to each messag
 
 ## Message format
 
-Each API message is a JSON serialized object containing a `type` key. After the authentication phase messages also must contain an `id`, an integer that contains the number of interactions.
+Each API message is a JSON serialized object containing a `type` key. After the authentication phase messages also must contain an `id`, an integer that the caller can use to correlate messages to responses.
 
 Example of an auth message:
 
@@ -205,7 +205,7 @@ You can also subscribe to one or more triggers with `subscribe_trigger`. These a
         "entity_id": "binary_sensor.motion_occupancy",
         "from": "off",
         "to":"on"
-    },
+    }
 }
 ```
 
@@ -334,9 +334,9 @@ The server will respond with a result message to indicate that the event was fir
 }
 ```
 
-## Calling a service
+## Calling a service action
 
-This will call a service in Home Assistant. Right now there is no return value. The client can listen to `state_changed` events if it is interested in changed entities as a result of a service call.
+This will call a service action in Home Assistant. Right now there is no return value. The client can listen to `state_changed` events if it is interested in changed entities as a result of a call.
 
 ```json
 {
@@ -353,10 +353,12 @@ This will call a service in Home Assistant. Right now there is no return value. 
   "target": {
     "entity_id": "light.kitchen"
   }
+  // Must be included for service actions that return response data
+  "return_response": true
 }
 ```
 
-The server will indicate with a message indicating that the service is done executing.
+The server will indicate with a message indicating that the action is done executing.
 
 ```json
 {
@@ -368,10 +370,13 @@ The server will indicate with a message indicating that the service is done exec
       "id": "326ef27d19415c60c492fe330945f954",
       "parent_id": null,
       "user_id": "31ddb597e03147118cf8d2f8fbea5553"
-    }
+    },
+    "response": null
   }
 }
 ```
+
+The `result` of the call will always include a `response` to account for service actions that support responses. When a action that doesn't support responses is called, the value of `response` will be `null`.
 
 ## Fetching states
 
@@ -417,9 +422,9 @@ The server will respond with a result message containing the config.
 }
 ```
 
-## Fetching services
+## Fetching service actions
 
-This will get a dump of the current services in Home Assistant.
+This will get a dump of the current service actions in Home Assistant.
 
 ```json
 {
@@ -428,7 +433,7 @@ This will get a dump of the current services in Home Assistant.
 }
 ```
 
-The server will respond with a result message containing the services.
+The server will respond with a result message containing the service actions.
 
 ```json
 {
@@ -461,67 +466,7 @@ The server will respond with a result message containing the current registered 
 }
 ```
 
-## Fetching camera thumbnails
-
-_Introduced in Home Assistant 0.69._
-
-:::caution Deprecated
-This websocket command was depreciated in Home Assistant Core [0.107](https://www.home-assistant.io/blog/2020/03/18/release-107/) and will be removed in a future release. Until then it will result in a `WARNING` entry in the user's log.
-:::
-
-Return a b64 encoded thumbnail of a camera entity.
-
-```json
-{
-  "id": 19,
-  "type": "camera_thumbnail",
-  "entity_id": "camera.driveway"
-}
-```
-
-The server will respond with a result message containing the thumbnail.
-
-```json
-{
-  "id": 19,
-  "type": "result",
-  "success": true,
-  "result": {
-    "content_type": "image/jpeg",
-    "content": "<base64 encoded image>"
-  }
-}
-```
-
-## Fetching media player thumbnails
-
-_Introduced in Home Assistant 0.69._
-
-Fetch a base64 encoded thumbnail picture for a media player.
-
-```json
-{
-  "id": 19,
-  "type": "media_player_thumbnail",
-  "entity_id": "media_player.living_room"
-}
-```
-
-The server will respond with the image encoded via base64.
-
-```json
-{
-  "id": 19,
-  "type": "result",
-  "success": true,
-  "result": {
-    "content_type": "image/jpeg",
-    "content": "<base64 encoded image>"
-  }
-}
-```
-
-## Pings and Pongs
+## Pings and pongs
 
 The API supports receiving a ping from the client and returning a pong. This serves as a heartbeat to ensure the connection is still alive:
 
@@ -585,3 +530,28 @@ If an error occurs, the `success` key in the `result` message will be set to `fa
    }
 }
 ```
+
+### Error handling during service action calls and translations
+
+The JSON below shows an example of an error response. If `HomeAssistantError` error (or a subclass of `HomeAssistantError`) is handled, translation information, if set, will be added to the response. 
+
+When handling `ServiceValidationError` (`service_validation_error`) a stack trace is printed to the logs at debug level only.
+
+```json
+{
+   "id": 24,
+   "type":"result",
+   "success": false,
+   "error": {
+      "code": "service_validation_error",
+      "message": "Option 'custom' is not a supported mode.",
+      "translation_key": "unsupported_mode",
+      "translation_domain": "kitchen_sink",
+      "translation_placeholders": {
+        "mode": "custom"
+      }
+   }
+}
+```
+
+[Read more](/docs/core/platform/raising_exceptions) about raising exceptions or and the [localization of exceptions](/docs/internationalization/core/#exceptions).

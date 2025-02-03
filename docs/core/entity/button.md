@@ -1,5 +1,5 @@
 ---
-title: Button Entity
+title: Button entity
 sidebar_label: Button
 ---
 
@@ -27,7 +27,7 @@ Other properties that are common to all entities such as `device_class`, `icon`,
 
 The press method can be used to trigger an action towards a device or service.
 It is called by Home Assistant when the user presses the button or the
-service to press the button has been called.
+action to press the button has been called.
 
 ```python
 class MyButton(ButtonEntity):
@@ -44,7 +44,8 @@ class MyButton(ButtonEntity):
 
 Optionally specifies what type of entity it is. It will possibly map to Google device types.
 
-| Value | Description
+| Constant | Description
 | ----- | -----------
-| restart | The button entity restarts the device.
-| update | The button entity updates the software of the device.
+| `ButtonDeviceClass.IDENTIFY` | The button entity identifies a device.
+| `ButtonDeviceClass.RESTART` | The button entity restarts the device.
+| `ButtonDeviceClass.UPDATE` | The button entity updates the software of the device. The use of this device class should be avoided, please consider using the [`update`](/docs/core/entity/update) entity instead.

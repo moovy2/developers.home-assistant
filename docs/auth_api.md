@@ -54,7 +54,7 @@ http://your-instance.com/auth/authorize?
 The user will navigate to this link and be presented with instructions to log in and authorize your application. Once authorized, the user will be redirected back to the passed in redirect uri with the authorization code and state as part of the query parameters. Example:
 
 ```txt
-https://hass-auth-demo.glitch.me/auth_callback
+https://hass-auth-demo.glitch.me/auth_callback?
     code=12345&
     state=http%3A%2F%2Fhassio.local%3A8123
 ```
@@ -135,7 +135,7 @@ An HTTP status code of 400 will be returned if an invalid request has been issue
 ### Revoking a refresh token
 
 :::tip
-`client_id` is not need for revoke refresh token
+`client_id` is not required to revoke a refresh token
 :::
 The token endpoint is also capable of revoking a refresh token. Revoking a refresh token will immediately revoke the refresh token and all access tokens that it has ever granted. To revoke a refresh token, make the following request:
 

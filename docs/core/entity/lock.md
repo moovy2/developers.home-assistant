@@ -1,5 +1,5 @@
 ---
-title: Lock Entity
+title: Lock entity
 sidebar_label: Lock
 ---
 
@@ -19,14 +19,31 @@ Properties should always only return information from memory and not do I/O (lik
 | is_locking | bool | None | Indication of whether the lock is currently locking. Used to determine `state`.
 | is_unlocking | bool | None | Indication of whether the lock is currently unlocking. Used to determine `state`.
 | is_jammed | bool | None | Indication of whether the lock is currently jammed. Used to determine `state`.
+| is_opening | bool | None | Indication of whether the lock is currently opening. Used to determine `state`.
+| is_open | bool | None | Indication of whether the lock is currently open. Used to determine `state`.
 
-### Supported Features
+### States
 
-Supported features constants are combined using the bitwise or (`|`) operator.
+The state is defined by setting the above properties. The resulting state is using the `LockState` enum to return one of the below members.
 
-| Constant | Description |
-|----------|--------------------------------------|
-| `SUPPORT_OPEN` | This lock supports opening the door latch.
+| Value       | Description                                                        |
+|-------------|--------------------------------------------------------------------|
+| `LOCKED`    | The lock is locked.                                                |
+| `LOCKING`   | The lock is locking.                                               |
+| `UNLOCKING` | The lock is unlocking.                                             |
+| `UNLOCKED`  | The lock is unlocked.                                             |
+| `JAMMED`    | The lock is currently jammed.                                      |
+| `OPENING`   | The lock is opening.                                               |
+| `OPEN`      | The lock is open.                                                  |
+
+## Supported features
+
+Supported features are defined by using values in the `LockEntityFeature` enum
+and are combined using the bitwise or (`|`) operator.
+
+| Value  | Description                                |
+| ------ | ------------------------------------------ |
+| `OPEN` | This lock supports opening the door latch. |
 
 ## Methods
 

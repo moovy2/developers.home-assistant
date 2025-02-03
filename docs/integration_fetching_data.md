@@ -1,10 +1,10 @@
 ---
-title: "Fetching Data"
+title: "Fetching data"
 ---
 
 Your integration will need to fetch data from an API to be able to provide this to Home Assistant. This API can be available over the web (local or cloud), sockets, serial ports exposed via USB sticks, etc.
 
-## Push vs Poll
+## Push vs poll
 
 APIs come in many different shapes and forms but at its core they fall in two categories: push and poll.
 
@@ -27,6 +27,8 @@ This API will have a single method to fetch data for all the entities that you h
 
 Home Assistant provides a DataUpdateCoordinator class to help you manage this as efficiently as possible.
 
+When using the DataUpdateCoordinator, the data being polled is often expected to stay mostly the same. For example, if you are polling a light that is only turned on once a week, that data may be the same nearly all the time. The default behavior is always calling back listeners when the data is updated, even if it does not change. If the data returned from the API can be compared for changes with the Python `__eq__` method, set `always_update=False` when creating the DataUpdateCoordinator to avoid unnecessary callbacks and writes to the state machine.
+
 ```python
 """Example integration using DataUpdateCoordinator."""
 
@@ -36,6 +38,7 @@ import logging
 import async_timeout
 
 from homeassistant.components.light import LightEntity
+from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -81,10 +84,26 @@ class MyCoordinator(DataUpdateCoordinator):
             name="My sensor",
             # Polling interval. Will only be polled if there are subscribers.
             update_interval=timedelta(seconds=30),
+            # Set always_update to `False` if the data returned from the
+            # api can be compared via `__eq__` to avoid duplicate updates
+            # being dispatched to listeners
+            always_update=True
         )
         self.my_api = my_api
+        self._device: MyDevice | None = None
 
-    async def _async_update_data():
+    async def _async_setup(self):
+        """Set up the coordinator
+
+        This is the place to set up your coordinator,
+        or to load data, that only needs to be loaded once.
+
+        This method will be called automatically during
+        coordinator.async_config_entry_first_refresh.
+        """
+        self._device = await self.my_api.get_device()
+
+    async def _async_update_data(self):
         """Fetch data from API endpoint.
 
         This is the place to pre-process the data to lookup tables
@@ -94,7 +113,11 @@ class MyCoordinator(DataUpdateCoordinator):
             # Note: asyncio.TimeoutError and aiohttp.ClientError are already
             # handled by the data update coordinator.
             async with async_timeout.timeout(10):
-                return await self.my_api.fetch_data()
+                # Grab active context variables to limit data required to be fetched from API
+                # Note: using context is not required if there is no need or ability to limit
+                # data retrieved from API.
+                listening_idx = set(self.async_contexts())
+                return await self.my_api.fetch_data(listening_idx)
         except ApiAuthError as err:
             # Raising ConfigEntryAuthFailed will cancel future updates
             # and start a config flow with SOURCE_REAUTH (async_step_reauth)
@@ -116,7 +139,7 @@ class MyEntity(CoordinatorEntity, LightEntity):
 
     def __init__(self, coordinator, idx):
         """Pass coordinator to CoordinatorEntity."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, context=idx)
         self.idx = idx
 
     @callback
@@ -143,9 +166,9 @@ Some APIs will offer an endpoint per device. It sometimes won't be possible to m
 
 If you can map exactly one device endpoint to a single entity, you can fetch the data for this entity inside the `update()`/`async_update()` methods. Make sure polling is set to `True` and Home Assistant will call this method regularly.
 
-If your entities need to fetch data before being written to Home Assistant for the first time, pass `True` to the `add_entities` method: `add_entities([MyEntity()], True)`.
+If your entities need to fetch data before being written to Home Assistant for the first time, pass `update_before_add=True` to the `add_entities` method: `add_entities([MyEntity()], update_before_add=True)`.
 
-You can control the polling interval for your integration by defining a `SCAN_INTERVAL` constant in your platform. Careful with setting this too low. It will take up resources in Home Assistant, can overwhelm the device hosting the API or can get you blocked from cloud APIs.
+You can control the polling interval for your integration by defining a `SCAN_INTERVAL` constant in your platform. Careful with setting this too low. It will take up resources in Home Assistant, can overwhelm the device hosting the API or can get you blocked from cloud APIs. The minimum allowed value is 5 seconds.
 
 ```python
 from datetime import timedelta
@@ -159,15 +182,15 @@ If you have an API endpoint that pushes data, you can still use the data update 
 
 When new data arrives, use `coordinator.async_set_updated_data(data)` to pass the data to the entities. If this method is used on a coordinator that polls, it will reset the time until the next time it will poll for data.
 
-## Request Parallelism
+## Request parallelism
 
 :::info
 This is an advanced topic.
 :::
 
-Home Assistant has built-in logic to make sure that integrations do not hammer APIs and consume all available resources in Home Assistant. This logic is built around limiting the number of parallel requests. This logic is automatically used during service calls and entity updates.
+Home Assistant has built-in logic to make sure that integrations do not hammer APIs and consume all available resources in Home Assistant. This logic is built around limiting the number of parallel requests. This logic is automatically used during service action calls and entity updates.
 
-Home Assistant controls the number of parallel updates (calls to `update()`) by maintaining a [semaphore](https://docs.python.org/3/library/asyncio-sync.html#asyncio.Semaphore) per integration. For example, if the semaphore allows 1 parallel connection, updates and service calls will wait if one is in progress. If the value is 0, the integration is itself responsible for limiting the number of parallel requests if necessary.
+Home Assistant controls the number of parallel updates (calls to `update()`) by maintaining a [semaphore](https://docs.python.org/3/library/asyncio-sync.html#asyncio.Semaphore) per integration. For example, if the semaphore allows 1 parallel connection, updates and service action calls will wait if one is in progress. If the value is 0, the integration is itself responsible for limiting the number of parallel requests if necessary.
 
 The default value for parallel requests for a platform is decided based on the first entity that is added to Home Assistant. It's 0 if the entity defines the `async_update` method, else it's 1. (this is a legacy decision)
 

@@ -1,6 +1,5 @@
 ---
-title: Integration Configuration Options
-sidebar_label: Configuration Options
+title: Options flow
 ---
 
 An integration that is configured via a config entry can expose options to the user to allow tweaking behavior of the integration, like which devices or locations should be integrated.
@@ -14,34 +13,35 @@ For an integration to support options it needs to have an `async_get_options_flo
 ```python
 @staticmethod
 @callback
-def async_get_options_flow(config_entry):
-    return OptionsFlowHandler(config_entry)
+def async_get_options_flow(
+    config_entry: ConfigEntry,
+) -> OptionsFlowHandler:
+    """Create the options flow."""
+    return OptionsFlowHandler()
 ```
 
 ## Flow handler
 
-The Flow handler works just like the config flow handler, except that the first step in the flow will always be `async_step_init`.
+The Flow handler works just like the config flow handler, except that the first step in the flow will always be `async_step_init`. The current config entry details are available through the `self.config_entry` property.
 
 ```python
+OPTIONS_SCHEMA=vol.Schema(
+    {
+        vol.Required("show_things"): bool,
+    }
+)
 class OptionsFlowHandler(config_entries.OptionsFlow):
-    def __init__(self, config_entry):
-        """Initialize options flow."""
-        self.config_entry = config_entry
-
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(data=user_input)
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        "show_things",
-                        default=self.config_entry.options.get("show_things"),
-                    ): bool
-                }
+            data_schema=self.add_suggested_values_to_schema(
+                OPTIONS_SCHEMA, self.config_entry.options
             ),
         )
 ```

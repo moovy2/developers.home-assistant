@@ -1,7 +1,12 @@
 ---
-title: Remote Entity
+title: Remote entity
 sidebar_label: Remote
 ---
+
+The remote entity can represent two different types of devices:
+
+1. A physical device that sends commands.
+2. A virtual device in Home Assistant that sends commands to another physical device, eg a television.
 
 Derive entity platforms from [`homeassistant.components.remote.RemoteEntity`](https://github.com/home-assistant/home-assistant/blob/master/homeassistant/components/remote/__init__.py)
 
@@ -20,17 +25,20 @@ Properties should always only return information from memory and not do I/O (lik
 
 An activity is a predefined activity or macro that puts the remote in a specific state. For example, a "Watch TV" activity may turn on multiple devices and change the channel to a specific channel.
 
-## Supported Features
+## Supported features
 
-| Constant | Description
-| -------- | -----------
-| `SUPPORT_LEARN_COMMAND`  | Entity allows learning commands from devices.
-| `SUPPORT_DELETE_COMMAND` | Entity allows deleting commands from devices.
-| `SUPPORT_ACTIVITY` | Entity supports activities.
+Supported features are defined by using values in the `RemoteEntityFeature` enum
+and are combined using the bitwise or (`|`) operator.
+
+| Value            | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `LEARN_COMMAND`  | Entity allows learning commands from devices. |
+| `DELETE_COMMAND` | Entity allows deleting commands from devices. |
+| `ACTIVITY`       | Entity supports activities.                   |
 
 ## Methods
 
-### Turn On Command
+### Turn on command
 
 ```python
 class MyRemote(RemoteEntity):
@@ -42,7 +50,7 @@ class MyRemote(RemoteEntity):
          """Send the power on command."""
 ```
 
-### Turn Off Command
+### Turn off command
 
 ```python
 class MyRemote(RemoteEntity):
@@ -54,7 +62,7 @@ class MyRemote(RemoteEntity):
          """Send the power off command."""
 ```
 
-### Toggle Command
+### Toggle command
 
 ```python
 class MyRemote(RemoteEntity):
@@ -66,7 +74,7 @@ class MyRemote(RemoteEntity):
          """Toggle a device."""
 ```
 
-### Send Command
+### Send command
 
 ```python
 class MyRemote(RemoteEntity):
@@ -78,7 +86,7 @@ class MyRemote(RemoteEntity):
         """Send commands to a device."""
 ```
 
-### Learn Command
+### Learn command
 
 Only implement this method if the flag `SUPPORT_LEARN_COMMAND` is set.
 
@@ -92,7 +100,7 @@ class MyRemote(RemoteEntity):
         """Learn a command from a device."""
 ```
 
-### Delete Command
+### Delete command
 
 Only implement this method if the flag `SUPPORT_DELETE_COMMAND` is set.
 
